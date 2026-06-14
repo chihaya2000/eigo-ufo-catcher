@@ -677,22 +677,27 @@ function speak(text){
     speechSynthesis.speak(makeUtter(text));
   }catch(e){}
 }
-// 3単語を じゅんばんに 発音し、ぜんぶ おわったら done() を よぶ
-// （各 utterance の onend で すすめ、ねんのため タイマーでも かんりょう）
+// 単語を 1つずつ 発音し、つぎの単語まで WORD_GAP だけ あける。ぜんぶ おわったら done()
+const WORD_GAP=1000; // 単語と単語の あいだ（1びょう）
 function speakAll(list, done){
-  let finished=false;
-  const finish=()=>{ if(finished) return; finished=true; try{ done && done(); }catch(e){} };
+  let finished=false, fallback=null;
+  const finish=()=>{ if(finished) return; finished=true; if(fallback) clearTimeout(fallback); try{ done && done(); }catch(e){} };
   if(!('speechSynthesis' in window) || !list || !list.length){ setTimeout(finish, 250); return; }
   try{ speechSynthesis.cancel(); }catch(e){}
-  let cnt=0;
-  const step=()=>{ if(++cnt>=list.length) finish(); };
-  list.forEach(text=>{
-    const u=makeUtter(text);
-    u.onend=step; u.onerror=step;
-    try{ speechSynthesis.speak(u); }catch(e){ step(); }
-  });
-  // フォールバック（onend が とどかない 端末むけ）
-  setTimeout(finish, 950*list.length + 1200);
+  let i=0;
+  const speakNext=()=>{
+    if(finished) return;
+    if(i>=list.length){ finish(); return; }
+    const u=makeUtter(list[i]); i++;
+    let moved=false;
+    const advance=()=>{ if(moved) return; moved=true;
+      if(i>=list.length) finish(); else setTimeout(speakNext, WORD_GAP); };
+    u.onend=advance; u.onerror=advance;
+    try{ speechSynthesis.speak(u); }catch(e){ advance(); }
+  };
+  speakNext();
+  // フォールバック（onend が とどかない 端末むけ）：止まらないよう最大時間で完了
+  fallback=setTimeout(finish, (2200+WORD_GAP)*list.length + 1500);
 }
 if('speechSynthesis' in window){
   loadVoices();
