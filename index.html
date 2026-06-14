@@ -590,10 +590,11 @@ function judge(choice, card){
   hint.innerHTML='🔊 もういちど きいてね<span class="dots">…</span>';
   foot.appendChild(hint);
 
-  // ② 回答後：3単語をすべて発音 → 終わったら「つぎへ」を出す
+  // ② 回答後：「正解」を さいしょに → のこり2つを うえ（A→B→C）の順 で すべて発音 → 終わったら「つぎへ」
   state.locked=true;
-  const allWords=[...cards.children].map(el=>el.querySelector('.word').textContent);
-  speakAll(allWords, ()=>{
+  const displayWords=[...cards.children].map(el=>el.querySelector('.word').textContent);
+  const ordered=[state.current.en, ...displayWords.filter(w=>w!==state.current.en)];
+  speakAll(ordered, ()=>{
     state.locked=false;
     hint.remove();
     const btn=document.createElement('button');
